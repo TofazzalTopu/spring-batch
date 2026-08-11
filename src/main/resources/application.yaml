@@ -2,12 +2,14 @@ spring:
   application:
     name: employee
 
+  profiles:
+    active: dev
+
   datasource:
-#    url: jdbc:h2:mem:mydb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    url: jdbc:h2:file:./data/batchdb
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
+    url: jdbc:mysql://localhost:3306/test_db?useSSL=false&serverTimezone=Asia/Kuala_Lumpur&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       pool-name: HikariLibraryPool
       maximum-pool-size: 10
@@ -15,28 +17,21 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
       connection-timeout: 30000
-      leak-detection-threshold: 2000
+      leak-detection-threshold: 60000
       auto-commit: true
       read-only: false
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-
-  jpa:
-    hibernate:
-      ddl-auto: create
-    database-platform: org.hibernate.dialect.H2Dialect
-    show-sql: true
-    defer-datasource-initialization: true
-    open-in-view: false
 
   cache:
     type: none
 
   batch:
     job:
-      enabled: true
+      enabled: false
     jdbc:
       initialize-schema: always
+
+app:
+  import:
+    input-directory: /Users/mdtofazzalhossain/Documents/Development/POCProjects/Spring Batch/data/import/
+    scheduler:
+      delay: 30000

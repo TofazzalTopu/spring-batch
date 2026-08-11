@@ -10,9 +10,13 @@ public class EmployeeProcessor implements ItemProcessor<Employee, Employee> {
   @Override
   public Employee process(Employee employee) {
 
-    employee.setName(employee.getName().toUpperCase());
+    if (employee.getName() != null) {
+      employee.setName(employee.getName().trim());
+    }
 
-    employee.setSalary(employee.getSalary() * 1.10);
+    if (employee.getEmail() != null) {
+      employee.setEmail(employee.getEmail().trim().toLowerCase());
+    }
 
     return employee;
   }

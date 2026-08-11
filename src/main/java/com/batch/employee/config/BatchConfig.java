@@ -2,14 +2,15 @@ package com.batch.employee.config;
 
 import com.batch.employee.listener.JobCompletionListener;
 import com.batch.employee.model.Employee;
-import com.batch.employee.processor.EmployeeProcessor;
-import java.sql.SQLException;
+import com.batch.employee.model.EmployeeStaging;
+import com.batch.employee.processor.EmployeeStagingProcessor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,35 +20,47 @@ import org.springframework.transaction.PlatformTransactionManager;
 public class BatchConfig {
 
   @Bean
-  public Job employeeJob(
+  public Job employeeImportJob(
           JobRepository jobRepository,
-          Step employeeStep,
+          Step employeeStagingStep,
+          Step employeeLoadStep,
           JobCompletionListener listener) {
 
-    return new JobBuilder("employeeJob", jobRepository)
+    return new JobBuilder("employeeImportJob", jobRepository)
             .listener(listener)
-            .start(employeeStep)
+            .start(employeeStagingStep)
+            .next(employeeLoadStep)
             .build();
   }
 
   @Bean
-  public Step employeeStep(
-          JobRepository repository,
-          PlatformTransactionManager txManager,
-          FlatFileItemReader<Employee> reader,
-          EmployeeProcessor processor,
-          JdbcBatchItemWriter<Employee> writer) {
+  public Step employeeStagingStep(
+          JobRepository jobRepository,
+          PlatformTransactionManager transactionManager,
+          FlatFileItemReader<Employee> employeeReader,
+          EmployeeStagingProcessor processor,
+          JdbcBatchItemWriter<EmployeeStaging> employeeStagingWriter) {
 
-    return new StepBuilder("employeeStep", repository)
-            .<Employee, Employee>chunk(100, txManager)
-            .reader(reader)
+    return new StepBuilder("employeeStagingStep", jobRepository)
+            .<Employee, EmployeeStaging>chunk(1000, transactionManager)
+            .reader(employeeReader)
             .processor(processor)
-            .writer(writer)
-            .faultTolerant()
-            .retry(SQLException.class)
-            .retryLimit(3)
-            .skip(NumberFormatException.class)
-            .skipLimit(100)
+            .writer(employeeStagingWriter)
             .build();
   }
+
+  @Bean
+  public Step employeeLoadStep(
+          JobRepository jobRepository,
+          PlatformTransactionManager transactionManager,
+          JdbcCursorItemReader<EmployeeStaging> employeeStagingReader,
+          JdbcBatchItemWriter<EmployeeStaging> employeeLoadWriter) {
+
+    return new StepBuilder("employeeLoadStep", jobRepository)
+            .<EmployeeStaging, EmployeeStaging>chunk(1000, transactionManager)
+            .reader(employeeStagingReader)
+            .writer(employeeLoadWriter)
+            .build();
+  }
+
 }

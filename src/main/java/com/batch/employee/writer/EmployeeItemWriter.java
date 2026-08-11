@@ -1,9 +1,10 @@
 package com.batch.employee.writer;
 
-import com.batch.employee.model.Employee;
+import com.batch.employee.model.EmployeeStaging;
 import javax.sql.DataSource;
-import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
+
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -11,21 +12,56 @@ import org.springframework.context.annotation.Configuration;
 public class EmployeeItemWriter {
 
   @Bean
-  public JdbcBatchItemWriter<Employee> writer(DataSource dataSource) {
+  public JdbcBatchItemWriter<EmployeeStaging> employeeStagingWriter(
+          DataSource dataSource) {
 
-    JdbcBatchItemWriter<Employee> writer = new JdbcBatchItemWriter<>();
+    return new JdbcBatchItemWriterBuilder<EmployeeStaging>()
+            .dataSource(dataSource)
+            .sql("""
+                    INSERT INTO employee_staging
+                        (
+                            import_id,
+                            source_row_number,
+                            name,
+                            email,
+                            salary,
+                            validation_status
+                        )
+                    VALUES
+                        (
+                            :importId,
+                            :rowNumber,
+                            :name,
+                            :email,
+                            :salary,
+                            :validationStatus
+                        )
+                    """)
+            .beanMapped()
+            .build();
+  }
 
-    writer.setDataSource(dataSource);
+  @Bean
+  public JdbcBatchItemWriter<EmployeeStaging> employeeLoadWriter(
+          DataSource dataSource) {
 
-    writer.setSql(
-        """
-            INSERT INTO employee(id,name,email,salary)
-            VALUES(:id,:name,:email,:salary)
-        """);
-
-    writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
-
-    writer.afterPropertiesSet();
-    return writer;
+    return new JdbcBatchItemWriterBuilder<EmployeeStaging>()
+            .dataSource(dataSource)
+            .sql("""
+                    INSERT INTO employee
+                        (
+                            name,
+                            email,
+                            salary
+                        )
+                    VALUES
+                        (
+                            :name,
+                            :email,
+                            :salary
+                        )
+                    """)
+            .beanMapped()
+            .build();
   }
 }
