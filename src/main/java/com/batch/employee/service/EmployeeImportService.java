@@ -52,7 +52,7 @@ public class EmployeeImportService {
 
         try {
 
-            if (!batchImportRepository.claimImport(importId)) {
+            if (!batchImportRepository.markProcessing(importId)) {
                 throw new IllegalStateException("Unable to claim import " + importId);
             }
 
@@ -84,7 +84,7 @@ public class EmployeeImportService {
 
         log.info("Request received to execute importId={}", importId);
 
-        boolean claimed = batchImportRepository.claimImport(importId);
+        boolean claimed = batchImportRepository.markProcessing(importId);
 
         if (!claimed) {
 

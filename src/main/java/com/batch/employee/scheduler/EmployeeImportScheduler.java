@@ -20,13 +20,15 @@ public class EmployeeImportScheduler {
 
         var imports = batchImportRepository.findReceivedImports(5);
 
+        log.info("Starting scheduler. No of records to process: {}", (long) imports.size());
+
         for (Long importId : imports) {
             try {
                 /*
                  * Important:
                  * Atomically claim the import.
                  */
-                boolean claimed = batchImportRepository.claimImport(importId);
+                boolean claimed = batchImportRepository.markProcessing(importId);
 
                 if (!claimed) {
                     log.info("Import {} was already claimed", importId);

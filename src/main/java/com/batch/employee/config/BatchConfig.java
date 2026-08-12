@@ -4,6 +4,8 @@ import com.batch.employee.listener.JobCompletionListener;
 import com.batch.employee.model.Employee;
 import com.batch.employee.model.EmployeeStaging;
 import com.batch.employee.processor.EmployeeStagingProcessor;
+import com.batch.employee.tasklet.FinalizeImportTasklet;
+import com.batch.employee.tasklet.PrepareImportTasklet;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -22,14 +24,18 @@ public class BatchConfig {
   @Bean
   public Job employeeImportJob(
           JobRepository jobRepository,
+          Step prepareImportStep,
           Step employeeStagingStep,
           Step employeeLoadStep,
+          Step finalizeImportStep,
           JobCompletionListener listener) {
 
     return new JobBuilder("employeeImportJob", jobRepository)
             .listener(listener)
-            .start(employeeStagingStep)
+            .start(prepareImportStep)
+            .next(employeeStagingStep)
             .next(employeeLoadStep)
+            .next(finalizeImportStep)
             .build();
   }
 
@@ -60,6 +66,28 @@ public class BatchConfig {
             .<EmployeeStaging, EmployeeStaging>chunk(1000, transactionManager)
             .reader(employeeStagingReader)
             .writer(employeeLoadWriter)
+            .build();
+  }
+
+
+  @Bean
+  public Step prepareImportStep(
+          JobRepository jobRepository,
+          PlatformTransactionManager transactionManager,
+          PrepareImportTasklet prepareImportTasklet) {
+
+    return new StepBuilder("prepareImportStep", jobRepository)
+            .tasklet(prepareImportTasklet, transactionManager)
+            .build();
+  }
+  @Bean
+  public Step finalizeImportStep(
+          JobRepository jobRepository,
+          PlatformTransactionManager transactionManager,
+          FinalizeImportTasklet finalizeImportTasklet) {
+
+    return new StepBuilder("finalizeImportStep", jobRepository)
+            .tasklet(finalizeImportTasklet, transactionManager)
             .build();
   }
 

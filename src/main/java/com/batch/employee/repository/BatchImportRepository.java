@@ -1,26 +1,30 @@
 package com.batch.employee.repository;
 
+import com.batch.employee.dto.BatchImport;
 import com.batch.employee.dto.ImportStatusResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
 public class BatchImportRepository {
 
+    private static final String CREATED_AT = "created_at";
+    private static final String IMPORT_ID = "import_id";
     private final JdbcTemplate jdbcTemplate;
 
     public String findStatus(Long importId) {
 
         return jdbcTemplate.queryForObject(
                 """
-                SELECT status
-                FROM batch_import
-                WHERE import_id = ?
-                """,
+                        SELECT status
+                        FROM batch_import
+                        WHERE import_id = ?
+                        """,
                 String.class,
                 importId
         );
@@ -66,7 +70,7 @@ public class BatchImportRepository {
                         ORDER BY import_id
                         LIMIT ?
                         """,
-                (rs, rowNum) -> rs.getLong("import_id"),
+                (rs, rowNum) -> rs.getLong(IMPORT_ID),
                 limit
         );
     }
@@ -76,7 +80,7 @@ public class BatchImportRepository {
      * <p>
      * Only one scheduler/API process can change RECEIVED -> PROCESSING.
      */
-    public boolean claimImport(Long importId) {
+    public boolean markProcessing(Long importId) {
 
         int updated = jdbcTemplate.update(
                 """
@@ -92,17 +96,18 @@ public class BatchImportRepository {
         return updated == 1;
     }
 
-    public void markCompleted(Long importId) {
+    public int markCompleted(Long importId) {
 
-        jdbcTemplate.update(
-                """
-                UPDATE batch_import
-                SET status = 'COMPLETED',
-                    completed_at = CURRENT_TIMESTAMP
-                WHERE import_id = ?
-                """,
-                importId
-        );
+        String sql = """
+        UPDATE batch_import
+        SET status = 'COMPLETED',
+            completed_at = CURRENT_TIMESTAMP,
+            error_message = NULL
+        WHERE import_id = ?
+          AND status = 'PROCESSING'
+        """;
+
+        return jdbcTemplate.update(sql, importId);
     }
 
     public void markFailed(
@@ -111,12 +116,12 @@ public class BatchImportRepository {
 
         jdbcTemplate.update(
                 """
-                UPDATE batch_import
-                SET status = 'FAILED',
-                    completed_at = CURRENT_TIMESTAMP,
-                    error_message = ?
-                WHERE import_id = ?
-                """,
+                        UPDATE batch_import
+                        SET status = 'FAILED',
+                            completed_at = CURRENT_TIMESTAMP,
+                            error_message = ?
+                        WHERE import_id = ?
+                        """,
                 errorMessage,
                 importId
         );
@@ -169,14 +174,14 @@ public class BatchImportRepository {
                         """,
                 (rs, rowNum) -> new ImportStatusResponse(
 
-                        rs.getLong("import_id"),
+                        rs.getLong(IMPORT_ID),
 
                         rs.getString("file_name"),
 
                         rs.getString("status"),
 
-                        rs.getTimestamp("created_at") != null
-                                ? rs.getTimestamp("created_at")
+                        rs.getTimestamp(CREATED_AT) != null
+                                ? rs.getTimestamp(CREATED_AT)
                                 .toLocalDateTime()
                                 : null,
 
@@ -220,4 +225,43 @@ public class BatchImportRepository {
                 importId
         );
     }
+
+    public Optional<BatchImport> findById(Long importId) {
+
+        String sql = """
+                SELECT
+                    import_id,
+                    file_name,
+                    status,
+                    created_at,
+                    started_at,
+                    completed_at,
+                    error_message,
+                    job_execution_id
+                FROM batch_import
+                WHERE import_id = ?
+                """;
+
+        return jdbcTemplate.query(
+                sql,
+                ps -> ps.setLong(1, importId),
+                rs -> {
+                    if (!rs.next()) {
+                        return Optional.empty();
+                    }
+
+                    BatchImport item = new BatchImport();
+
+                    item.setImportId(rs.getLong(IMPORT_ID));
+                    item.setFileName(rs.getString("file_name"));
+                    item.setStatus(rs.getString("status"));
+                    item.setCreatedAt(
+                            rs.getTimestamp(CREATED_AT).toLocalDateTime()
+                    );
+
+                    return Optional.of(item);
+                }
+        );
+    }
+
 }
