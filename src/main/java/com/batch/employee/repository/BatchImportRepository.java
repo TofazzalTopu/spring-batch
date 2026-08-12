@@ -9,12 +9,13 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+import static com.batch.employee.constants.AppConstant.CREATED_AT;
+import static com.batch.employee.constants.AppConstant.IMPORT_ID;
+
 @Repository
 @RequiredArgsConstructor
 public class BatchImportRepository {
 
-    private static final String CREATED_AT = "created_at";
-    private static final String IMPORT_ID = "import_id";
     private final JdbcTemplate jdbcTemplate;
 
     public String findStatus(Long importId) {

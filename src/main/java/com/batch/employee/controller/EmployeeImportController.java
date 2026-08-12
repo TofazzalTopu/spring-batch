@@ -13,14 +13,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
+import static com.batch.employee.constants.AppConstant.*;
+
 @RestController
 @RequestMapping("/api/imports")
 @RequiredArgsConstructor
 public class EmployeeImportController {
 
-    private static final String IMPORT_ID = "importId";
-    private static final String STATUS_ID = "status";
-    private static final Object PROCESSING = "PROCESSING";
     private final EmployeeImportService employeeImportService;
 
     @PostMapping
@@ -30,8 +29,8 @@ public class EmployeeImportController {
 
         return ResponseEntity.accepted().body(
                 Map.of(
-                        IMPORT_ID, importId,
-                        STATUS_ID, PROCESSING
+                        IMPORTID, importId,
+                        STATUS, PROCESSING
                 )
         );
     }
@@ -46,8 +45,8 @@ public class EmployeeImportController {
                     .accepted()
                     .body(
                             Map.of(
-                                    IMPORT_ID, importId,
-                                    STATUS_ID, PROCESSING
+                                    IMPORTID, importId,
+                                    STATUS, PROCESSING
                             )
                     );
 
@@ -57,8 +56,8 @@ public class EmployeeImportController {
                     .status(HttpStatus.CONFLICT)
                     .body(
                             Map.of(
-                                    IMPORT_ID, importId,
-                                    STATUS_ID, BatchStatus.COMPLETED,
+                                    IMPORTID, importId,
+                                    STATUS, BatchStatus.COMPLETED,
                                     "message", e.getMessage()
                             )
                     );
@@ -69,8 +68,8 @@ public class EmployeeImportController {
                     .status(HttpStatus.CONFLICT)
                     .body(
                             Map.of(
-                                    IMPORT_ID, importId,
-                                    STATUS_ID, PROCESSING,
+                                    IMPORTID, importId,
+                                    STATUS, PROCESSING,
                                     "message", e.getMessage()
                             )
                     );
